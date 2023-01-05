@@ -1,0 +1,6 @@
+name: vcm-report-environment
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
