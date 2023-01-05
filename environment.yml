@@ -4,3 +4,7 @@ channels:
 dependencies:
   - numpy
   - pandas
+  - sqlalchemy
+  - psycopg2
+  - plotly
+  - warnings
