@@ -54,10 +54,10 @@ _, last_day = calendar.monthrange(current_date.year, current_date.month)
 end_of_month = dt.date(current_date.year, current_date.month, last_day)
 
 three_months = current_date + dt.timedelta(days=3*30) # CAN ENTER THIS MANUALLY
-six_months = current_date + dt.timedelta(days=6*30) # CAN ENTER THIS MANUALLY    ###### THIS IS FOR TWO MONTHS
+six_months = current_date + dt.timedelta(days=6*30) # CAN ENTER THIS MANUALLY   
 #three_months = three_months.date()
 
-end_of_year = dt.datetime.strptime('10-12-2023', '%d-%m-%Y').date()
+end_of_year = dt.datetime.strptime('10-12-2024', '%d-%m-%Y').date()
 
 one_year = current_date + dt.timedelta(days=365) # CAN ENTER THIS MANUALLY
 
@@ -73,7 +73,7 @@ class Position_Reporting:
         self.date = date
         self.FUM = premiums[premiums.Spread=='FUM']
         
-        self.EUA_CARRY = 1.038917   #### THIS NEEDS MANUAL ADJUSTING
+        self.EUA_CARRY = 1.037725   #### THIS NEEDS MANUAL ADJUSTING
         
         self.prices = self.price_ranges()  # dont need a price range for VCM
         self.current_prices = current_prices.copy()
@@ -82,14 +82,14 @@ class Position_Reporting:
         self.spot_price = self.spot.Price[0]
         
         self.fwds = self.positions[self.positions.Type=='Fwd'].reset_index(drop=True)
-        self.fwds['Time'] = self.fwds.Expiry - self.date # Need to be able to alter this class to run it across multiple times
+        self.fwds['Time'] = self.fwds.Expiry.astype('object') - self.date # Need to be able to alter this class to run it across multiple times
         self.fwds['Time'] = [i.days/365 for i in self.fwds.Time]
         self.fwds['Time'] = np.where(self.fwds.Time < 0, 0, self.fwds.Time)
         self.fwds['Value'] = self.fwds.Price * self.fwds.Qty
          
         
         self.ops = self.positions[self.positions.Type=='Option'].reset_index(drop=True)
-        self.ops['Time'] = self.ops.Expiry - self.date
+        self.ops['Time'] = self.ops.Expiry.astype('object') - self.date
         self.ops['Time'] = [i.days/365 for i in self.ops.Time]
         self.ops['Time'] = np.where(self.ops.Time < 0, 0, self.ops.Time)
         self.ops['Value'] = self.ops.Price * self.ops.Qty
@@ -103,9 +103,9 @@ class Position_Reporting:
         elif self.mkt=='EUA':
             price_range = list(range(55,121))
         elif self.mkt=='UKA':
-            price_range = list(range(30,76))
+            price_range = list(range(20,55))
         elif self.mkt=='CCA':
-            price_range = list(range(25,56))            
+            price_range = list(range(30,60))            
         elif self.mkt=='VCM':
             price_range = list(range(0,101)) # random price range for VCM so the code runs
         else:
@@ -185,10 +185,8 @@ class Position_Reporting:
             values_opt = []
             
             for p in self.prices:
-                if self.mkt=='EUA' or self.mkt=='CCA':  # for the EUA we need to run black-scholes against spot not futures price
+                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='UKA':  # for the EUA we need to run black-scholes against spot not futures price
                     spot = p/(1+current_op_rate)**current_op.Time # convert the futures price to spot
-                    #if current_op.Expiry.year==2024:
-                    #    spot *= self.EUA_CARRY
                     op_price = derivative.black_scholes(current_op.Subtype, spot, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
                     theta = derivative.option_theta(spot, current_op.Strike, current_op_rate, current_op.Vol, current_op.Time, current_op_type)
                     vega = derivative.option_vega(spot, current_op.Strike, current_op_rate, current_op.Vol, current_op.Time)/100            
@@ -284,7 +282,7 @@ class Position_Reporting:
         return [spot_value, fwd_value, op_value]
 
     
-    def std_moves(self, stds, freq):
+    def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_move, pos_std_move] which will be manually entered values to see what pnl happens to those specific values.
         mkt_prices = prices.copy()
         mkt_prices.set_index('Date', inplace=True)
         sub = mkt_prices[self.mkt]
@@ -296,18 +294,26 @@ class Position_Reporting:
         
         last_price = self.spot_price
         # Calculate positive and negative one standard deviation price moves
-        if stds==1:
-            positive_std_move = np.percentile(sub, 84.13)
-            negative_std_move = np.percentile(sub, 15.87)
-        elif stds==1.5:
-            positive_std_move = np.percentile(sub, 94.65)
-            negative_std_move = np.percentile(sub, 5.65)            
-        elif stds==2:
-            positive_std_move = np.percentile(sub, 97.72)
-            negative_std_move = np.percentile(sub, 2.28)
+        if calc_method == '':
+            if stds==1:
+                positive_std_move = np.percentile(sub, 84.13)
+                negative_std_move = np.percentile(sub, 15.87)
+            elif stds==1.5:
+                positive_std_move = np.percentile(sub, 94.65)
+                negative_std_move = np.percentile(sub, 5.65)            
+            elif stds==2:
+                positive_std_move = np.percentile(sub, 97.72)
+                negative_std_move = np.percentile(sub, 2.28)
+                
+            price_increase = (1+positive_std_move)*last_price
+            price_decrease = (1+negative_std_move)*last_price
             
-        price_increase = (1+positive_std_move)*last_price
-        price_decrease = (1+negative_std_move)*last_price
+        else:
+            # this functionality allows you to manually enter values into the function rather than using sigma
+            price_increase = calc_method[0]    
+            price_decrease = calc_method[1]
+            
+
         sigma_prices = [price_increase, price_decrease]
         
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,7 +353,7 @@ class Position_Reporting:
             current_op_type = current_op.Subtype
             current_op_rate = current_op.Rate
             
-            if self.mkt=='EUA':
+            if self.mkt=='EUA' or self.mkt=='CCA':
                 spot_increase = price_increase/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 spot_decrease = price_decrease/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 
@@ -422,7 +428,7 @@ class Position_Reporting:
                 current_op_type = current_op.Subtype
                 current_op_rate = current_op.Rate
             
-                if self.mkt=='EUA':
+                if self.mkt=='EUA' or self.mkt=='CCA':
                     p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
                 else:
                     pass
@@ -522,36 +528,30 @@ class Position_Reporting:
 
 
 # [current_date, end_of_month, three_months, end_of_year]
-report = Position_Reporting(positions, 'VCM', current_date)
-report = Position_Reporting(positions, 'ACCU', current_date)
-report = Position_Reporting(positions, 'NZU', current_date)
-report = Position_Reporting(positions, 'EUA', current_date)
+#report = Position_Reporting(positions, 'VCM', current_date)
+#report = Position_Reporting(positions, 'ACCU', current_date)
+#report = Position_Reporting(positions, 'NZU', current_date)
+#report = Position_Reporting(positions, 'EUA', current_date)
 
-report = Position_Reporting(positions, 'ACCU', end_of_month)
-report = Position_Reporting(positions, 'ACCU', end_of_year)
-report = Position_Reporting(positions, 'ACCU', one_year)
-report.prices
+#report = Position_Reporting(positions, 'ACCU', end_of_month)
+#report = Position_Reporting(positions, 'ACCU', end_of_year)
+#report = Position_Reporting(positions, 'ACCU', one_year)
+#report.prices
 
-p, d, value = report.forwards()
-p, d, t, v, value = report.options()
-
-p, d, t, v, value = report.combine_frame()
-pos_values = report.current_values()
-
-sigma_pnl = report.std_moves(1,'daily')
-sigma_pnl = report.std_moves(2,'daily')
-sigma_pnl = report.std_moves(2,'weekly')
-
-price_pnl = report.price_moves([20,25,35,40])
-
-
-st_prices = report.std_moves(2,'daily')
-report.std_moves(2,'weekly')
-
-
-sub = prices['NZU']
-
-vol = report.rolling_vol()
-
-s = report.spot
-o = report.ops
+#p, d, value = report.forwards()
+#p, d, t, v, value = report.options()#
+#
+#p, d, t, v, value = report.combine_frame()
+#pos_values = report.current_values()
+#
+#sigma_pnl = report.std_moves(1,'daily')
+#sigma_pnl = report.std_moves(2,'daily')
+#sigma_pnl = report.std_moves(2,'weekly')
+#
+#price_pnl = report.price_moves([20,25,35,40])
+#
+#
+#st_prices = report.std_moves(2,'daily')
+#report.std_moves(2,'weekly')
+#
+#

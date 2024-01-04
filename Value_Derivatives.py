@@ -52,6 +52,35 @@ class Derivatives:
         
         return value
     
+    def black76(self, option_type, S, K, r, T, sigma, q=0):
+        """
+        Calculate the option price for commodity futures using the Black-Scholes-Merton model.
+
+        Parameters:
+        - option_type (str): 'call' for call option, 'put' for put option
+        - S (float): Current commodity futures price
+        - K (float): Option strike price
+        - T (float): Time to expiration in years
+        - r (float): Risk-free interest rate
+        - sigma (float): Volatility of the commodity futures price
+        - q (float): Continuous yield or cost of carry (default is 0)
+
+        Returns:
+        - float: Commodity option price
+        """
+        if option_type not in ['call', 'put']:
+            raise ValueError("Invalid option type. Use 'call' or 'put'.")
+
+        d1 = (math.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+
+        if option_type == 'call':
+            option_price = math.exp(-r * T) * (S * math.exp((r - q) * T) * self.norm_cdf(d1) - K * self.norm_cdf(d2))
+        else:
+            option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * math.exp((r - q) * T) * self.norm_cdf(-d1))
+
+        return option_price
+    
     def norm_cdf(self, x):
         """Calculates the cumulative distribution function of the standard normal distribution."""
         return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
