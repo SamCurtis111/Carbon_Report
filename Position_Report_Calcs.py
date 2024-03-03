@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 27/06/2023
-functionality to value portfolio to visualise in bqnt
+functionality to value portfolio to visualise in ipynb
 
 for calculations the options:
-    # In this loop we loop on i which is each option in the frame
+    # In this loop we loop on i which is each option in the dataframe
     # We then sub-loop on p which is each theoretical price in the provided list
     # For that theoretical price p we calculate what the value of the option would be
     # We then calc the option pnl by substracting that from the current option value
@@ -28,7 +28,7 @@ import datetime as dt
 #from datetime import date
 import calendar
 
-mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','VCM']
+mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','VCM','OTHER']
 positions = dict()
 for m in mkts:
     positions[m] = pd.read_excel('Positions.xlsx', sheet_name=m)
@@ -36,7 +36,7 @@ for m in mkts:
 
 premiums = pd.read_excel('Positions.xlsx', sheet_name='Index')
 
-prices = pd.read_excel('Positions.xlsx', sheet_name='Prices')
+actual_prices = pd.read_excel('Positions.xlsx', sheet_name='Prices')
 current_prices = premiums[premiums.Spread.isin(mkts)]
 
 rates = ['USDAUD','GBPAUD','EURAUD','NZDAUD']
@@ -73,7 +73,7 @@ class Position_Reporting:
         self.date = date
         self.FUM = premiums[premiums.Spread=='FUM']
         
-        self.EUA_CARRY = 1.037725   #### THIS NEEDS MANUAL ADJUSTING
+        self.EUA_CARRY = 1.037125   #### THIS NEEDS MANUAL ADJUSTING
         
         self.prices = self.price_ranges()  # dont need a price range for VCM
         self.current_prices = current_prices.copy()
@@ -100,14 +100,18 @@ class Position_Reporting:
             price_range = list(range(20,46))
         elif self.mkt=='NZU':
             price_range = list(range(55,96))
+        elif self.mkt=='LGC':
+            price_range = list(range(25,51))            
         elif self.mkt=='EUA':
-            price_range = list(range(55,121))
+            price_range = list(range(30,101))
         elif self.mkt=='UKA':
             price_range = list(range(20,55))
         elif self.mkt=='CCA':
             price_range = list(range(30,60))            
         elif self.mkt=='VCM':
             price_range = list(range(0,101)) # random price range for VCM so the code runs
+        elif self.mkt=='OTHER':
+            price_range = list(range(50,101)) # random price range for OTHER... do the zooming etc yourself because it could be any market
         else:
             print('Mkt text entry error use either; ACCU, NZU, EUA, UKA, CCA')
         return price_range    
@@ -185,7 +189,7 @@ class Position_Reporting:
             values_opt = []
             
             for p in self.prices:
-                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='UKA':  # for the EUA we need to run black-scholes against spot not futures price
+                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='UKA' or self.mkt=='OTHER':  # for the EUA we need to run black-scholes against spot not futures price
                     spot = p/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                     op_price = derivative.black_scholes(current_op.Subtype, spot, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
                     theta = derivative.option_theta(spot, current_op.Strike, current_op_rate, current_op.Vol, current_op.Time, current_op_type)
@@ -283,7 +287,7 @@ class Position_Reporting:
 
     
     def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_move, pos_std_move] which will be manually entered values to see what pnl happens to those specific values.
-        mkt_prices = prices.copy()
+        mkt_prices = actual_prices.copy()
         mkt_prices.set_index('Date', inplace=True)
         sub = mkt_prices[self.mkt]
         
@@ -353,7 +357,7 @@ class Position_Reporting:
             current_op_type = current_op.Subtype
             current_op_rate = current_op.Rate
             
-            if self.mkt=='EUA' or self.mkt=='CCA':
+            if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='OTHER':
                 spot_increase = price_increase/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 spot_decrease = price_decrease/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 
@@ -387,7 +391,7 @@ class Position_Reporting:
     
     
     def price_moves(self, PriceRange):    # to create a table and graph below the sigma moves graphs in the same style
-        #mkt_prices = prices.copy()
+        #mkt_prices = actual_prices.copy()
         #mkt_prices.set_index('Date', inplace=True)
         #sub = mkt_prices[self.mkt]
         
@@ -428,12 +432,12 @@ class Position_Reporting:
                 current_op_type = current_op.Subtype
                 current_op_rate = current_op.Rate
             
-                if self.mkt=='EUA' or self.mkt=='CCA':
-                    p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='OTHER':
+                    new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+                    new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
                 else:
-                    pass
-  
-                new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                    new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                  
                 value = new_op_price * current_op.Qty
                 op_pnl = (value - current_op.Value) * self.fx
                 
@@ -453,7 +457,7 @@ class Position_Reporting:
     
     
     def rolling_vol(self):
-        return derivative.calculate_rolling_volatility(self.mkt, prices)
+        return derivative.calculate_rolling_volatility(self.mkt, actual_prices)
 
 
 
@@ -528,7 +532,7 @@ class Position_Reporting:
 
 
 # [current_date, end_of_month, three_months, end_of_year]
-#report = Position_Reporting(positions, 'VCM', current_date)
+#report = Position_Reporting(positions, 'LGC', current_date)
 #report = Position_Reporting(positions, 'ACCU', current_date)
 #report = Position_Reporting(positions, 'NZU', current_date)
 #report = Position_Reporting(positions, 'EUA', current_date)

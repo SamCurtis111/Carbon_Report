@@ -18,7 +18,7 @@ rates = 1.04    #### THIS IS JUST A RANDOM INPUT NUMBER
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # __init__ values
-mkt = 'UKA'
+mkt = 'EUA'
 report = Position_Reporting(positions, mkt, current_date)
 position_frame = positions.copy()
 positions = position_frame[mkt]
@@ -48,26 +48,106 @@ ops['Value'] = ops.Price * ops.Qty
 
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## MKT RISK ALLOCATION; % PRICE MOVES
+mkt_current = Position_Reporting(positions, mkt, current_date)
+horizon=current_date
 
-report = Position_Reporting(positions, 'VCM', current_date)
+price_returns = [-0.15, -0.1, -0.05, 0, .05, .1, .15]
 
-mkt_current = Position_Reporting(positions, 'NZU', current_date)
+def create_returns(horizon):
+    price_pnls = pd.DataFrame()
+    price_ranges = pd.DataFrame()
+    price_ranges['% Move'] = [int(i*100) for i in price_returns]
+    for m in mkts:    #[:-1]:
+        mkt_current = Position_Reporting(positions, m, horizon)
+        spot = mkt_current.spot_price
+        mkt_prices = [(1+i)*spot for i in price_returns]
+        price_pnls[m] = round(mkt_current.price_moves(mkt_prices)['Total'],2)       #########################################
+        price_ranges[m] = mkt_prices
 
-calc_method = [60,90]
-calc_method_copy = [60,90]
-manual_price_daily = mkt_current.std_moves(1,'daily', calc_method=calc_method_copy)
-manual_price_weekly = mkt_current.std_moves(1,'weekly', calc_method=calc_method_copy)
-spot_price = mkt_current.spot_price
+    price_ranges = round(price_ranges,2)
+    return price_ranges, price_returns, price_pnls
+
+price_ranges, price_returns, price_pnls = create_returns(current_date)
 
 
+PriceRange = mkt_prices
+def price_moves(self, PriceRange):    # to create a table and graph below the sigma moves graphs in the same style
+    #mkt_prices = actual_prices.copy()
+    #mkt_prices.set_index('Date', inplace=True)
+    #sub = mkt_prices[mkt]
+    
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Calc the PnLs
+    ## SPOT PNL
+    spots = [(i-spot_price)*spot.Qty[0]*fx for i in PriceRange]   # pnl on spot position
+    
+    # FWD 
+    # Process:
+        # we want the pnl of all the fwds at each entered price
+        # at each price p, we take the pnl of each fwd i and append it to price_pnl
+        # we then sum price pnl which is the pnl of all fwds at that price
+        # we append that value to fwd pnls
+    fwd_pnls = []
+    for p in PriceRange:
+        price_pnl = []
+        for i in range(0, len(fwds)):
+            current_fwd = fwds.iloc[i]
+            current_fwd_value = current_fwd.Value
+            current_fwd_rate = current_fwd.Rate            
+            
+            new_fwd_price = derivative.fwd_pricer(p, current_fwd_rate, current_fwd.Time, current_fwd.Subtype)
+            value = new_fwd_price * current_fwd.Qty
+            fwd_pnl = (value - current_fwd_value) * fx  
+            
+            price_pnl.append(fwd_pnl)
+        fwd_pnls.append(sum(price_pnl))
+        
+    # OPTION PNL
+    # Same as above, we loop through each of the prices and within that loop want to calculate pnl of every option at that price point then sum those values
+    op_pnls = []
+    for p in PriceRange:
+        price_pnl = []
+        for i in range(0, len(ops)):   # loop through each option
+            current_op = ops.loc[i]
+            current_op_value = current_op.Price
+            current_op_type = current_op.Subtype
+            current_op_rate = current_op.Rate
+        
+            if mkt=='EUA' or mkt=='CCA' or mkt=='OTHER':
+                new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+                new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+            else:
+                new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+              
+            value = new_op_price * current_op.Qty
+            op_pnl = (value - current_op.Value) * fx
+            
+            price_pnl.append(op_pnl)
+        op_pnls.append(sum(price_pnl))
+
+    # PUT IT ALL TOGETHER        
+    price_frame = pd.DataFrame()
+    price_frame['Spot'] = spots
+    price_frame['Forwards'] = fwd_pnls
+    price_frame['Options'] = op_pnls
+    price_frame['Total'] = price_frame.sum(axis=1)
+    price_frame['Price'] = PriceRange
+    price_frame = price_frame[['Price','Spot','Forwards','Options','Total']]
+        
+    return price_frame    
 
 
-freq='weekly'
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## MKT RISK ALLOCATION; STD MOVES
+
+freq='daily'
 spot = position
+calc_method=''
 
 def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_move, pos_std_move] which will be manually entered values to see what pnl happens to those specific values.
-    mkt_prices = prices.copy()
+    mkt_prices = actual_prices.copy()
     mkt_prices.set_index('Date', inplace=True)
     sub = mkt_prices[mkt]
     
@@ -90,8 +170,8 @@ def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_
             negative_std_move = np.percentile(sub, 2.28)
             
         price_increase = (1+positive_std_move)*last_price
-        price_decrease = (1+negative_std_move)*last_price        
-            
+        price_decrease = (1+negative_std_move)*last_price
+        
     else:
         # this functionality allows you to manually enter values into the function rather than using sigma
         price_increase = calc_method[0]    
@@ -103,26 +183,26 @@ def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Calc the PnLs
     ## SPOT PNL
-    spot_profit = (price_increase - self.spot_price) * self.spot.Qty[0] * self.fx
-    spot_loss = (price_decrease - self.spot_price) * self.spot.Qty[0] * self.fx
+    spot_profit = (price_increase - spot_price) * spot.Qty[0] * fx
+    spot_loss = (price_decrease - spot_price) * spot.Qty[0] * fx
     spots = [spot_profit, spot_loss]
     
     # FWD 
     fwd_profits = []
     fwd_losses = []
-    for i in range(0, len(self.fwds)):
-        current_fwd = self.fwds.iloc[i]
+    for i in range(0, len(fwds)):
+        current_fwd = fwds.iloc[i]
         #current_fwd = fwds.iloc[i]
         current_fwd_value = current_fwd.Value
         current_fwd_rate = current_fwd.Rate            
         
         fwd_increase = derivative.fwd_pricer(price_increase, current_fwd_rate, current_fwd.Time, current_fwd.Subtype)
         value = fwd_increase * current_fwd.Qty
-        fwd_profit = (value - current_fwd_value) * self.fx
+        fwd_profit = (value - current_fwd_value) * fx
         
         fwd_decrease = derivative.fwd_pricer(price_decrease, current_fwd_rate, current_fwd.Time, current_fwd.Subtype)
         value = fwd_decrease * current_fwd.Qty
-        fwd_loss = (value - current_fwd_value) * self.fx
+        fwd_loss = (value - current_fwd_value) * fx
         
         fwd_profits.append(fwd_profit)
         fwd_losses.append(fwd_loss)
@@ -131,13 +211,13 @@ def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_
     # OPTION PNL
     op_profits = []
     op_losses = []
-    for i in range(0, len(self.ops)):
-        current_op = self.ops.loc[i]
+    for i in range(0, len(ops)):
+        current_op = ops.loc[i]
         current_op_value = current_op.Price
         current_op_type = current_op.Subtype
         current_op_rate = current_op.Rate
         
-        if self.mkt=='EUA' or self.mkt=='CCA':
+        if mkt=='EUA' or mkt=='CCA' or mkt=='OTHER':
             spot_increase = price_increase/(1+current_op_rate)**current_op.Time # convert the futures price to spot
             spot_decrease = price_decrease/(1+current_op_rate)**current_op.Time # convert the futures price to spot
             
@@ -150,8 +230,8 @@ def std_moves(self, stds, freq, calc_method=''):   # alt calc_method = [neg_std_
         op_value_increase = op_price_increase * current_op.Qty
         op_value_decrease = op_price_decrease * current_op.Qty
         
-        op_profit = (op_value_increase - current_op.Value) * self.fx            
-        op_loss = (op_value_decrease - current_op.Value) * self.fx
+        op_profit = (op_value_increase - current_op.Value) * fx            
+        op_loss = (op_value_decrease - current_op.Value) * fx
         
         op_profits.append(op_profit)
         op_losses.append(op_loss)
