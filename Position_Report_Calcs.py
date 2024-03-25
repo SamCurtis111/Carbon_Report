@@ -73,7 +73,7 @@ class Position_Reporting:
         self.date = date
         self.FUM = premiums[premiums.Spread=='FUM']
         
-        self.EUA_CARRY = 1.037125   #### THIS NEEDS MANUAL ADJUSTING
+        self.EUA_CARRY = 1.03774   #### THIS NEEDS MANUAL ADJUSTING
         
         self.prices = self.price_ranges()  # dont need a price range for VCM
         self.current_prices = current_prices.copy()
@@ -99,7 +99,7 @@ class Position_Reporting:
         if self.mkt=='ACCU':
             price_range = list(range(20,46))
         elif self.mkt=='NZU':
-            price_range = list(range(55,96))
+            price_range = list(range(40,96))
         elif self.mkt=='LGC':
             price_range = list(range(25,51))            
         elif self.mkt=='EUA':
@@ -205,7 +205,8 @@ class Position_Reporting:
                     op_price=0   
                 
                 op_value = op_price * current_op.Qty
-                op_pnl = (op_value - current_op.Value) * self.fx
+                op_pnl = (op_price - current_op.Price) * current_op.Qty * self.fx
+                #op_pnl = (op_value - current_op.Value) * self.fx
                 op_delta = delta * current_op.Qty
                 op_theta = theta * current_op.Qty
                 op_vega = vega * current_op.Qty
@@ -432,9 +433,12 @@ class Position_Reporting:
                 current_op_type = current_op.Subtype
                 current_op_rate = current_op.Rate
             
-                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='OTHER':
-                    new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
-                    new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='UKA' or self.mkt=='OTHER':
+                    if current_op.Time < 0.4:  # black76 seems to wrok better for shorter dated options... counterintuitive... 
+                        new_op_price = derivative.black76(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol) ####################################################
+                    else:
+                        new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+                        new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)                    
                 else:
                     new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
                   
@@ -458,7 +462,6 @@ class Position_Reporting:
     
     def rolling_vol(self):
         return derivative.calculate_rolling_volatility(self.mkt, actual_prices)
-
 
 
 

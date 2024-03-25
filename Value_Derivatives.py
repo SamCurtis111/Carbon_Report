@@ -68,16 +68,19 @@ class Derivatives:
         Returns:
         - float: Commodity option price
         """
-        if option_type not in ['call', 'put']:
-            raise ValueError("Invalid option type. Use 'call' or 'put'.")
+        if option_type not in ['Call', 'Put']:
+            raise ValueError("Invalid option type. Use 'Call' or 'Put'.")
 
-        d1 = (math.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
+        #d1 = (math.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
+        d1 = (math.log(S / K) + 0.5 * sigma**2 * T) / (sigma * math.sqrt(T))
         d2 = d1 - sigma * math.sqrt(T)
 
-        if option_type == 'call':
-            option_price = math.exp(-r * T) * (S * math.exp((r - q) * T) * self.norm_cdf(d1) - K * self.norm_cdf(d2))
+        if option_type == 'Call':
+            #option_price = math.exp(-r * T) * (S * math.exp((r - q) * T) * self.norm_cdf(d1) - K * self.norm_cdf(d2))
+            option_price = math.exp(-r * T) * (S * self.norm_cdf(d1) - K * self.norm_cdf(d2))
         else:
-            option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * math.exp((r - q) * T) * self.norm_cdf(-d1))
+            #option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * math.exp((r - q) * T) * self.norm_cdf(-d1))
+            option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * self.norm_cdf(-d1))
 
         return option_price
     
@@ -211,7 +214,7 @@ class Derivatives:
 
 
 
-
+#derivative = Derivatives(premiums)
 #v = calculate_rolling_volatility('ACCU')
 #pos_reporting = Position_Reporting(positions, 'NZU', dates['OneYear'])
 #pos_reporting = Position_Reporting(positions, 'NZU', dates['EoM'])
@@ -224,7 +227,7 @@ class Derivatives:
 #
 #current_op = pos_reporting.ops.loc[0]    # the Dec23 55P
 #price = 56
-#op_price = derivative.black_scholes(current_op.Subtype, price, current_op.Strike,current_op.Rate, current_op.Time, current_op.Vol)
+#op_price = derivative.black_scholes('Put', 40, 62,0.06, 0.0646, 0.34)
 #
 #current_op.Subtype
 #current_op.Strike

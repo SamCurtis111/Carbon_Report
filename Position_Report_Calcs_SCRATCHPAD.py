@@ -3,7 +3,7 @@
 Position_Report_Calcs scratchad
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+import numpy as np
 
 mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','VCM']
 positions = dict()
@@ -11,14 +11,17 @@ for m in mkts:
     positions[m] = pd.read_excel('Positions.xlsx', sheet_name=m)
     positions[m]['Expiry'] = pd.to_datetime(positions[m].Expiry).dt.date
     
-    
+random_date = dt.datetime.strptime('16-12-2024', '%d-%m-%Y').date()   
 premiums = pd.read_excel('Positions.xlsx', sheet_name='Index') 
 current_date = dt.datetime.today().date()
-rates = 1.04    #### THIS IS JUST A RANDOM INPUT NUMBER
+rates = 1.06    #### THIS IS JUST A RANDOM INPUT NUMBER
+
+from Value_Derivatives import Derivatives
+derivative = Derivatives(premiums)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # __init__ values
-mkt = 'EUA'
+mkt = 'NZU'
 report = Position_Reporting(positions, mkt, current_date)
 position_frame = positions.copy()
 positions = position_frame[mkt]
@@ -72,7 +75,9 @@ def create_returns(horizon):
 price_ranges, price_returns, price_pnls = create_returns(current_date)
 
 
-PriceRange = mkt_prices
+
+
+PriceRange = mkt_prices[mkt]
 def price_moves(self, PriceRange):    # to create a table and graph below the sigma moves graphs in the same style
     #mkt_prices = actual_prices.copy()
     #mkt_prices.set_index('Date', inplace=True)
@@ -109,6 +114,8 @@ def price_moves(self, PriceRange):    # to create a table and graph below the si
     op_pnls = []
     for p in PriceRange:
         price_pnl = []
+        option_prices = []
+        option_prices_black = []
         for i in range(0, len(ops)):   # loop through each option
             current_op = ops.loc[i]
             current_op_value = current_op.Price
@@ -116,8 +123,12 @@ def price_moves(self, PriceRange):    # to create a table and graph below the si
             current_op_rate = current_op.Rate
         
             if mkt=='EUA' or mkt=='CCA' or mkt=='OTHER':
-                new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
-                new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                if current_op.Time < 0.4:
+                    new_op_price = derivative.black76(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                else:
+                    new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+                    new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+                
             else:
                 new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
               
@@ -125,6 +136,8 @@ def price_moves(self, PriceRange):    # to create a table and graph below the si
             op_pnl = (value - current_op.Value) * fx
             
             price_pnl.append(op_pnl)
+            option_prices.append(new_op_price)
+            #option_prices_black.append(new_op_price76)
         op_pnls.append(sum(price_pnl))
 
     # PUT IT ALL TOGETHER        
@@ -138,6 +151,8 @@ def price_moves(self, PriceRange):    # to create a table and graph below the si
         
     return price_frame    
 
+m='NZU'
+PriceRange = changes[m]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## MKT RISK ALLOCATION; STD MOVES
@@ -271,7 +286,7 @@ value_opt = pd.DataFrame()
 value_opt['Price'] = report.prices
 
 ops = report.ops   ## for debugging
-i = 5    # specific option in report.ops
+i = 3    # specific option in report.ops
 
 for i in range(0, len(report.ops)):
     current_op = report.ops.loc[i]
@@ -378,3 +393,45 @@ for d in dates_values:
 nzu_opts = dict()
 for d in dates_values:
     nzu_opts[d] = Position_Reporting(positions, 'NZU', d).options()
+    
+    
+    
+    
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   
+ def combine_frame(self):
+     pnl_fwds, delta_fwds, value_fwds = self.forwards()
+     pnl_ops, delta_ops, theta_ops, vega_ops, value_ops = self.options()
+     
+     delta_frame = pd.DataFrame()
+     delta_frame['Price'] = self.prices
+     delta_frame['Spot'] = self.spot.Qty[0]
+     delta_frame['Fwds'] = delta_fwds.Fwd_Delta
+     delta_frame['Options'] = delta_ops.Option_Delta
+     delta_frame['Total_Delta'] = delta_frame.iloc[:,1:].sum(axis=1)
+     
+     pnl_frame = pd.DataFrame()
+     pnl_frame['Price'] = self.prices
+     pnl_frame['Spot'] = ((pnl_frame.Price - self.spot.Price[0]) * self.spot.Qty[0]) * self.fx
+     pnl_frame['Fwds'] = pnl_fwds.Fwd_Pnl
+     pnl_frame['Options'] = pnl_ops.Option_Pnl
+     pnl_frame['Total_Pnl'] = pnl_frame.iloc[:,1:].sum(axis=1)
+     
+     spot_value = pd.DataFrame()
+     spot_value['Price'] = self.prices
+     spot_value['Spot_Value'] = (spot_value['Price'] * self.spot.Qty[0]) * self.fx
+     
+     #value_frame = pd.DataFrame()  # This section is the sum of notional face value
+     #value_frame['Price'] = self.prices
+     #value_frame['Fwd_Value'] = value_fwds['Fwd_Value']
+     #value_frame['Option_Value'] = value_ops['Option_Value']
+     #value_frame['Spot_Value'] = spot_value['Spot_Value']
+     #value_frame['Position_Value'] = value_frame.iloc[:,1:].sum(axis=1)
+
+     value_frame = delta_frame.copy()  # This section is the sum of delta
+     value_frame = value_frame.iloc[:,:-1]
+     value_frame['Spot'] = (value_frame['Spot'] * value_frame.Price) * self.fx
+     value_frame['Fwds'] = (value_frame.Fwds * value_frame.Price) * self.fx
+     value_frame['Options'] = (value_frame.Options * value_frame.Price) * self.fx
+     value_frame['Total_Allocation'] = value_frame.iloc[:,1:].sum(axis=1)
+     
+     return pnl_frame, delta_frame, theta_ops, vega_ops, value_frame
