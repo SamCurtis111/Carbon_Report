@@ -21,7 +21,7 @@ derivative = Derivatives(premiums)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # __init__ values
-mkt = 'NZU'
+mkt = 'EUA'
 report = Position_Reporting(positions, mkt, current_date)
 position_frame = positions.copy()
 positions = position_frame[mkt]
@@ -435,3 +435,38 @@ for d in dates_values:
      value_frame['Total_Allocation'] = value_frame.iloc[:,1:].sum(axis=1)
      
      return pnl_frame, delta_frame, theta_ops, vega_ops, value_frame
+ 
+    
+derivative = Derivatives(premiums) 
+derivative.black76('Call',69.56,65,0.03706,0.193,0.416)
+derivative.black76('Put',69.56,50,0.03706,0.686,0.4582)
+
+
+
+
+
+spot_price = 63.51
+
+price_pnl = []
+option_price = []
+for i in range(0, len(ops)):   # loop through each option
+    current_op = ops.loc[i]
+    current_op_value = current_op.Price
+    current_op_type = current_op.Subtype
+    current_op_rate = current_op.Rate
+
+    if mkt=='EUA' or mkt=='CCA' or mkt=='UKA' or mkt=='OTHER':
+        new_op_price = derivative.black76(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+        #if current_op.Time < 0.4:  # black76 seems to wrok better for shorter dated options... counterintuitive... 
+        #    new_op_price = derivative.black76(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+        #else:
+        #    new_p = p/(1+current_op_rate)**current_op.Time   # convert the EUA futures price to spot
+        #    new_op_price = derivative.black_scholes(current_op.Subtype, new_p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)                    
+    else:
+        new_op_price = derivative.black_scholes(current_op.Subtype, p, current_op.Strike, current_op_rate, current_op.Time, current_op.Vol)
+      
+    value = new_op_price * current_op.Qty
+    op_pnl = (value - current_op.Value) * fx
+    
+    price_pnl.append(op_pnl)
+    option_price.append(new_op_price)

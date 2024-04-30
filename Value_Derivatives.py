@@ -76,11 +76,11 @@ class Derivatives:
         d2 = d1 - sigma * math.sqrt(T)
 
         if option_type == 'Call':
-            #option_price = math.exp(-r * T) * (S * math.exp((r - q) * T) * self.norm_cdf(d1) - K * self.norm_cdf(d2))
-            option_price = math.exp(-r * T) * (S * self.norm_cdf(d1) - K * self.norm_cdf(d2))
+            #option_price = math.exp(-r * T) * (S * self.norm_cdf(d1) - K * self.norm_cdf(d2))
+            option_price = math.exp(-r * T) * (S * norm.cdf(d1) - K * norm.cdf(d2))
         else:
             #option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * math.exp((r - q) * T) * self.norm_cdf(-d1))
-            option_price = math.exp(-r * T) * (K * self.norm_cdf(-d2) - S * self.norm_cdf(-d1))
+            option_price = math.exp(-r * T) * (K * norm.cdf(-d2) - S * norm.cdf(-d1))
 
         return option_price
     
@@ -115,7 +115,7 @@ class Derivatives:
         # T: Time to expiration (in years)
         # option_type: "call" or "put"
     
-        d1 = (log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * sqrt(T))
+        d1 = (math.log(S / K) + (r + (sigma ** 2) / 2) * T) / (sigma * sqrt(T))
         d2 = d1 - sigma * sqrt(T)
     
         if option_type == "Call":
@@ -141,7 +141,7 @@ class Derivatives:
         d2 = d1 - sigma * math.sqrt(T)
         vega = S * norm.pdf(d1) * sqrt(T)
         
-        return vega    
+        return vega
             
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
