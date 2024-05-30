@@ -138,5 +138,26 @@ class Market_Info:
             market_move[m] -= self.spot_price[m]
         
         return horizon, changes, market_return, price_shift, market_move
+
+    def sigma_prices(self, horizon):    # What is a 1, 1.5, 2 sigma price shift over the input horizon
+        horizon, changes, market_return, price_shift, market_move = self.price_moves(horizon)
         
+        products = []
+        two_sigma = []
+        onepointfive_sigma = []
+        one_sigma = []
         
+        for m in list(market_return):
+            products.append(m)
+            spot = self.spot_price[m]
+            two_sigma.append(round(spot * (1+ market_return[m].quantile(0.05, interpolation='nearest')), 2))
+            onepointfive_sigma.append(round(spot * (1+ market_return[m].quantile(0.13, interpolation='nearest')), 2))
+            one_sigma.append(round(spot * (1+ market_return[m].quantile(0.32, interpolation='nearest')), 2))
+            
+        sigma_prices = pd.DataFrame()
+        sigma_prices['Mkt'] = products
+        sigma_prices['TwoSigma'] = two_sigma
+        sigma_prices['OnePointFive'] = onepointfive_sigma
+        sigma_prices['OneSigma'] = one_sigma
+        
+        return sigma_prices

@@ -105,11 +105,11 @@ class Position_Reporting:
         elif self.mkt=='EUA':
             price_range = list(range(30,101))
         elif self.mkt=='UKA':
-            price_range = list(range(20,55))
+            price_range = list(range(25,71))
         elif self.mkt=='CCA':
             price_range = list(range(25,60)) 
         elif self.mkt=='RGGI':
-            price_range = list(range(13,26))             
+            price_range = list(range(15,41))             
         elif self.mkt=='VCM':
             price_range = list(range(0,101)) # random price range for VCM so the code runs
         elif self.mkt=='OTHER':

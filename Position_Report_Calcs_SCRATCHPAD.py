@@ -3,7 +3,20 @@
 Position_Report_Calcs scratchad
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import os
+os.chdir('C:\\GitHub\\Carbon_Report')
+
+import pandas as pd
 import numpy as np
+import math
+from math import log, exp, sqrt
+from scipy.stats import norm
+
+from sqlalchemy import create_engine
+engine = create_engine('postgresql://postgres:iforgot23@localhost/ACCU')
+
+import datetime as dt
+import calendar
 
 mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','VCM']
 positions = dict()
@@ -19,9 +32,11 @@ rates = 1.06    #### THIS IS JUST A RANDOM INPUT NUMBER
 from Value_Derivatives import Derivatives
 derivative = Derivatives(premiums)
 
+from Position_Report_Calcs import Position_Reporting
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # __init__ values
-mkt = 'EUA'
+mkt = 'ACCU'
 report = Position_Reporting(positions, mkt, current_date)
 position_frame = positions.copy()
 positions = position_frame[mkt]
@@ -53,7 +68,7 @@ ops['Value'] = ops.Price * ops.Qty
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## MKT RISK ALLOCATION; % PRICE MOVES
-mkt_current = Position_Reporting(positions, mkt, current_date)
+mkt_current = Position_Reporting(position_frame, mkt, current_date)
 horizon=current_date
 
 price_returns = [-0.15, -0.1, -0.05, 0, .05, .1, .15]
@@ -286,7 +301,7 @@ value_opt = pd.DataFrame()
 value_opt['Price'] = report.prices
 
 ops = report.ops   ## for debugging
-i = 3    # specific option in report.ops
+i = 0    # specific option in report.ops
 
 for i in range(0, len(report.ops)):
     current_op = report.ops.loc[i]
