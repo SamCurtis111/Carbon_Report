@@ -28,9 +28,9 @@ class Simulated_Portfolio:
         for m in list(self.market_return):
             products.append(m)
             spot = self.spot_prices[m]
-            two_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.05, interpolation='nearest'))))
-            onepointfive_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.13, interpolation='nearest'))))
-            one_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.32, interpolation='nearest'))))
+            two_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.05, interpolation='nearest')), 2))
+            onepointfive_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.13, interpolation='nearest')), 2))
+            one_sigma.append(round(spot * (1+ self.market_return[m].quantile(0.32, interpolation='nearest')), 2))
             
         sigma_prices = pd.DataFrame()
         sigma_prices['Mkt'] = products
@@ -38,3 +38,15 @@ class Simulated_Portfolio:
         sigma_prices['OnePointFive'] = onepointfive_sigma
         sigma_prices['OneSigma'] = one_sigma
         return sigma_prices
+    
+    
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Scratchpad
+timehorizon = current_date + dt.timedelta(days=5)
+
+sim = Simulated_Portfolio('5d')
+sim.calculate_sigma()
+sim.horizon
+
+changes = sim.changes
+mkt_return = sim.market_return
