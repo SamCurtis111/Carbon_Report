@@ -36,7 +36,7 @@ from Position_Report_Calcs import Position_Reporting
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # __init__ values
-mkt = 'ACCU'
+mkt = 'EUA'
 report = Position_Reporting(positions, mkt, current_date)
 position_frame = positions.copy()
 positions = position_frame[mkt]

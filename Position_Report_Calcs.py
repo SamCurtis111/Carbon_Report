@@ -28,7 +28,7 @@ import datetime as dt
 #from datetime import date
 import calendar
 
-mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','VCM','OTHER']
+mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','RGGI','VCM','OTHER']
 positions = dict()
 for m in mkts:
     positions[m] = pd.read_excel('Positions.xlsx', sheet_name=m)
@@ -109,13 +109,13 @@ class Position_Reporting:
         elif self.mkt=='CCA':
             price_range = list(range(25,60)) 
         elif self.mkt=='RGGI':
-            price_range = list(range(15,41))             
+            price_range = list(range(10,41))             
         elif self.mkt=='VCM':
             price_range = list(range(0,101)) # random price range for VCM so the code runs
         elif self.mkt=='OTHER':
             price_range = list(range(30,101)) # random price range for OTHER... do the zooming etc yourself because it could be any market
         else:
-            print('Mkt text entry error use either; ACCU, NZU, EUA, UKA, CCA')
+            print('Mkt text entry error use either; ACCU, NZU, EUA, UKA, CCA,RGGI')
         return price_range    
     
     def forwards(self):
@@ -361,7 +361,7 @@ class Position_Reporting:
             current_op_type = current_op.Subtype
             current_op_rate = current_op.Rate
             
-            if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='OTHER':
+            if self.mkt=='EUA' or self.mkt=='CCA' or self.mkt=='RGGI' or self.mkt=='OTHER':
                 spot_increase = price_increase/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 spot_decrease = price_decrease/(1+current_op_rate)**current_op.Time # convert the futures price to spot
                 
