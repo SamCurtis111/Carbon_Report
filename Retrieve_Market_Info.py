@@ -15,7 +15,7 @@ three_months = current_date + dt.timedelta(days=3*30)
 
 
 #mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','RGGI','VCM','OTHER']
-mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA']
+mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','RGGI']
 
 
 

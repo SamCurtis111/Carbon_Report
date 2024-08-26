@@ -147,7 +147,12 @@ class Derivatives:
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #### FWD VALUATION
     def fwd_pricer(self, spot, rate, time, subtype):
-        prem = self.premiums[self.premiums.Spread==subtype].Price.values[0]
+        #if np.isnan(subtype):
+        #    prem=0
+        try:
+            prem = self.premiums[self.premiums.Spread==subtype].Price.values[0]
+        except IndexError:
+            prem=0
         
         fwd = (spot + prem) * (1+rate)**time   # to deal with method premiums
         return fwd
