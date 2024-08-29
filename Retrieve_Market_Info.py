@@ -161,3 +161,7 @@ class Market_Info:
         sigma_prices['OneSigma'] = one_sigma
         
         return sigma_prices
+
+
+#m = Market_Info(mkts)
+#horizon, changes, market_return, price_shift, market_move = m.price_moves('daily')
