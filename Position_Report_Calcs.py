@@ -79,6 +79,7 @@ class Position_Reporting:
         self.current_prices = current_prices.copy()
        
         self.spot = self.positions[self.positions.Type=='Spot']
+        self.spot_qty = self.spot.Qty.sum()
         self.spot_price = self.spot.Price[0]
         
         self.fwds = self.positions[self.positions.Type=='Fwd'].reset_index(drop=True)
@@ -243,21 +244,21 @@ class Position_Reporting:
         
         delta_frame = pd.DataFrame()
         delta_frame['Price'] = self.prices
-        delta_frame['Spot'] = self.spot.Qty[0]
+        delta_frame['Spot'] = self.spot_qty
         delta_frame['Fwds'] = delta_fwds.Fwd_Delta
         delta_frame['Options'] = delta_ops.Option_Delta
         delta_frame['Total_Delta'] = delta_frame.iloc[:,1:].sum(axis=1)
         
         pnl_frame = pd.DataFrame()
         pnl_frame['Price'] = self.prices
-        pnl_frame['Spot'] = ((pnl_frame.Price - self.spot.Price[0]) * self.spot.Qty[0]) * self.fx
+        pnl_frame['Spot'] = ((pnl_frame.Price - self.spot.Price[0]) * self.spot_qty) * self.fx
         pnl_frame['Fwds'] = pnl_fwds.Fwd_Pnl
         pnl_frame['Options'] = pnl_ops.Option_Pnl
         pnl_frame['Total_Pnl'] = pnl_frame.iloc[:,1:].sum(axis=1)
         
         spot_value = pd.DataFrame()
         spot_value['Price'] = self.prices
-        spot_value['Spot_Value'] = (spot_value['Price'] * self.spot.Qty[0]) * self.fx
+        spot_value['Spot_Value'] = (spot_value['Price'] * self.spot_qty) * self.fx
         
         #value_frame = pd.DataFrame()  # This section is the sum of notional face value
         #value_frame['Price'] = self.prices
@@ -327,8 +328,8 @@ class Position_Reporting:
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Calc the PnLs
         ## SPOT PNL
-        spot_profit = (price_increase - self.spot_price) * self.spot.Qty[0] * self.fx
-        spot_loss = (price_decrease - self.spot_price) * self.spot.Qty[0] * self.fx
+        spot_profit = (price_increase - self.spot_price) * self.spot_qty * self.fx
+        spot_loss = (price_decrease - self.spot_price) * self.spot_qty * self.fx
         spots = [spot_profit, spot_loss]
         
         # FWD 
@@ -402,7 +403,7 @@ class Position_Reporting:
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Calc the PnLs
         ## SPOT PNL
-        spots = [(i-self.spot_price)*self.spot.Qty[0]*self.fx for i in PriceRange]   # pnl on spot position
+        spots = [(i-self.spot_price)*self.spot_qty*self.fx for i in PriceRange]   # pnl on spot position
         
         # FWD 
         # Process:
