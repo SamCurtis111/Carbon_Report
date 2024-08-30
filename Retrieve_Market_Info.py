@@ -37,7 +37,7 @@ class Market_Info:
         self.ivols = pd.read_excel('Positions.xlsx', sheet_name='iVols')  # implied volatilities of UKA and EUA put options at different strikes (as per bloomberg last)
         self.references = pd.read_excel('Positions.xlsx', sheet_name='Index')  # fx rates, spot prices
         self.FUM = self.references[self.references.Spread=='FUM']['Price']
-        self.FUM = self.FUM.reset_index(drop=True)[0]
+        self.FUM = self.FUM.reset_index(drop=True)[0] - 775000 #### REDEMPTION
         
         self.fx_rates = self.generate_fx_rates()
         self.positions = self.generate_positions()
