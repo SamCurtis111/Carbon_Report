@@ -163,5 +163,6 @@ class Market_Info:
         return sigma_prices
 
 
-#m = Market_Info(mkts)
+m = Market_Info(mkts)
 #horizon, changes, market_return, price_shift, market_move = m.price_moves('daily')
+p = m.positions

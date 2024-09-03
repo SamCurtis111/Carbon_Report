@@ -10,6 +10,9 @@ os.chdir('C:\\GitHub\\Carbon_Report')
 
 from Retrieve_Market_Info import Market_Info
 
+import datetime as dt
+current_date = dt.datetime.today().date()
+
 mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA']
 market_info = Market_Info(mkts)
 positions = market_info.positions
@@ -43,8 +46,10 @@ class Simulated_Portfolio:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Scratchpad
 timehorizon = current_date + dt.timedelta(days=5)
+timehorizon = current_date + dt.timedelta(days=1)
 
 sim = Simulated_Portfolio('5d')
+sim = Simulated_Portfolio('daily')
 sim.calculate_sigma()
 sim.horizon
 
