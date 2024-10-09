@@ -108,7 +108,7 @@ class Position_Reporting:
         elif self.mkt=='UKA':
             price_range = list(range(25,71))
         elif self.mkt=='CCA':
-            price_range = list(range(25,60)) 
+            price_range = list(range(20,56)) 
         elif self.mkt=='RGGI':
             price_range = list(range(10,41))             
         elif self.mkt=='VCM':
