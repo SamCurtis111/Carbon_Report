@@ -29,6 +29,7 @@ import datetime as dt
 import calendar
 
 mkts = ['ACCU','LGC','NZU','EUA', 'UKA', 'CCA','RGGI','VCM','OTHER']
+compliance_mkts = ['ACCU','NZU','EUA', 'UKA', 'CCA','RGGI']
 positions = dict()
 for m in mkts:
     positions[m] = pd.read_excel('Positions.xlsx', sheet_name=m)
@@ -45,6 +46,14 @@ rates = premiums[premiums.Spread.isin(rates)]
 from Value_Derivatives import Derivatives
 derivative = Derivatives(premiums)
 
+from Retrieve_Market_Info import Market_Info
+market_info = Market_Info(compliance_mkts)
+spot_prices = market_info.spot_price
+fx_rates = market_info.fx_rates
+
+#from Test_Portfolio_Historically import Portfolio_Performance_And_Risk
+#portfolio = Portfolio_Performance_And_Risk('daily')
+
 # Dates to use in calcs
 # [today, last day of current month, 3 months, end of year]
 # Get the last day of the current month
@@ -57,7 +66,7 @@ three_months = current_date + dt.timedelta(days=3*30) # CAN ENTER THIS MANUALLY
 six_months = current_date + dt.timedelta(days=6*30) # CAN ENTER THIS MANUALLY   
 #three_months = three_months.date()
 
-end_of_year = dt.datetime.strptime('10-12-2024', '%d-%m-%Y').date()
+end_of_year = dt.datetime.strptime('30-12-2024', '%d-%m-%Y').date()
 
 one_year = current_date + dt.timedelta(days=365) # CAN ENTER THIS MANUALLY
 
@@ -67,13 +76,16 @@ one_year = current_date + dt.timedelta(days=365) # CAN ENTER THIS MANUALLY
 class Position_Reporting:
     def __init__(self, position_frames, market, date):
         self.mkt = market # which market are we generating data for
+        self.markets = ['ACCU','NZU','EUA','UKA','CCA','RGGI'] # The number of markets being tested across beta allocation
         self.positions = position_frames[self.mkt].copy() 
         self.fx = self.positions.FX[0]  # 
         self.fx_all = rates.copy()    # all FX rates
         self.date = date
-        self.FUM = premiums[premiums.Spread=='FUM']
         
-        self.EUA_CARRY = 1.036803   #### THIS NEEDS MANUAL ADJUSTING
+        self.FUM = premiums[premiums.Spread=='FUM']
+        self.FUM = self.FUM['Price'].reset_index(drop=True)[0]
+        
+        self.EUA_CARRY = 1.03148   #### THIS NEEDS MANUAL ADJUSTING
         
         self.prices = self.price_ranges()  # dont need a price range for VCM
         self.current_prices = current_prices.copy()
@@ -276,6 +288,29 @@ class Position_Reporting:
         
         return pnl_frame, delta_frame, theta_ops, vega_ops, value_frame
     
+    def beta_units(self):   # How many units does a fully allocated beta portoflio hold
+        market_allocation = self.FUM * 1/len(self.markets)
+        
+        aud_spot_prices = spot_prices.copy()
+        for m in list(aud_spot_prices):
+            aud_spot_prices[m] *= fx_rates[m]
+            
+        market_units = aud_spot_prices.copy()
+        for m in market_units:
+            market_units[m] = round(market_allocation/market_units[m])
+        return market_units
+            
+    
+    def beta_pnl(self): # TO COMPARE THE CURRENT PORTFOLIO AGAINST A BETA PORTFOLIO AND DERIVE ALPHA
+        units = self.beta_units()
+        units = units[self.mkt]
+        pnl_frame = pd.DataFrame()
+        pnl_frame['Price'] = self.prices
+        pnl_frame['Spot'] = ((pnl_frame.Price - self.spot.Price[0]) * units) * self.fx
+        return pnl_frame
+        
+        
+    
     def current_values(self): # get the current AUD value of the positions in each mkt
         spot = self.spot.copy()
         spot['Value'] = spot.Qty * spot.Price * spot.FX
@@ -300,6 +335,8 @@ class Position_Reporting:
             sub = sub.pct_change()[-126:] # last 6 months of daily prices
         elif freq=='weekly':
             sub = sub.resample('W').ffill().pct_change()[1:] # convert prices to weekly
+        elif freq=='monthly':
+            sub = sub.resample('M').ffill().pct_change()[1:] # convert prices to weekly            
         
         last_price = self.spot_price
         # Calculate positive and negative one standard deviation price moves
@@ -545,6 +582,10 @@ class Position_Reporting:
 #report = Position_Reporting(positions, 'NZU', current_date)
 #report = Position_Reporting(positions, 'EUA', current_date)
 
+#report.beta_units()
+#report.beta_pnl()
+
+
 #report = Position_Reporting(positions, 'ACCU', end_of_month)
 #report = Position_Reporting(positions, 'ACCU', end_of_year)
 #report = Position_Reporting(positions, 'ACCU', one_year)
@@ -553,6 +594,8 @@ class Position_Reporting:
 #p, d, value = report.forwards()
 #p, d, t, v, value = report.options()#
 #
+
+
 #p, d, t, v, value = report.combine_frame()
 #pos_values = report.current_values()
 #
@@ -567,3 +610,29 @@ class Position_Reporting:
 #report.std_moves(2,'weekly')
 #
 #
+
+## DEBUGGING THE IPYNB GRAPHING CODE
+#def reporting_date(run_date='today'):
+#    if run_date=='today':
+#        current_date = dt.datetime.today().date()
+#        current_year = current_date.year
+#    else:
+#        current_date = run_date
+#        current_year = current_date.year
+#    return current_date, current_year
+#        
+#current_date, current_year = reporting_date()    # as at today
+#_, last_day = calendar.monthrange(current_date.year, current_date.month)
+#end_of_month = dt.date(current_date.year, current_date.month, last_day)
+#three_months = current_date + dt.timedelta(days=3*30)
+#six_months = current_date + dt.timedelta(days=6*30)
+#dates_names = ['today','EoM']
+#dates_values = [current_date, end_of_month]
+#
+#euas = dict()
+#for d in dates_values:
+#    euas[d] = Position_Reporting(positions, 'EUA', d).combine_frame()
+#    
+#mkt_data = euas.copy()
+#
+#p = Portfolio_Performance_And_Risk(current_date)
