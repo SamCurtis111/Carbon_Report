@@ -110,7 +110,7 @@ class Position_Reporting:
         
     def price_ranges(self):
         if self.mkt=='ACCU':
-            price_range = list(range(20,46))
+            price_range = list(range(25,56))
         elif self.mkt=='NZU':
             price_range = list(range(30,91))
         elif self.mkt=='LGC':
