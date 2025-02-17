@@ -66,7 +66,7 @@ three_months = current_date + dt.timedelta(days=3*30) # CAN ENTER THIS MANUALLY
 six_months = current_date + dt.timedelta(days=6*30) # CAN ENTER THIS MANUALLY   
 #three_months = three_months.date()
 
-end_of_year = dt.datetime.strptime('30-12-2024', '%d-%m-%Y').date()
+end_of_year = dt.datetime.strptime('30-12-2025', '%d-%m-%Y').date()
 
 one_year = current_date + dt.timedelta(days=365) # CAN ENTER THIS MANUALLY
 
@@ -126,7 +126,7 @@ class Position_Reporting:
         elif self.mkt=='VCM':
             price_range = list(range(0,101)) # random price range for VCM so the code runs
         elif self.mkt=='OTHER':
-            price_range = list(range(30,101)) # random price range for OTHER... do the zooming etc yourself because it could be any market
+            price_range = list(range(20,101)) # random price range for OTHER... do the zooming etc yourself because it could be any market
         else:
             print('Mkt text entry error use either; ACCU, NZU, EUA, UKA, CCA,RGGI')
         return price_range    
@@ -580,9 +580,24 @@ class Position_Reporting:
 #report = Position_Reporting(positions, 'LGC', current_date)
 #report = Position_Reporting(positions, 'ACCU', current_date)
 #report = Position_Reporting(positions, 'NZU', current_date)
-#report = Position_Reporting(positions, 'EUA', current_date)
+
+#report = Position_Reporting(positions, 'NZU', current_date)
 
 #report.beta_units()
+#market_allocation = report.FUM * 1/len(report.markets)
+
+#aud_spot_prices = spot_prices.copy()
+#for m in list(aud_spot_prices):
+#    aud_spot_prices[m] *= fx_rates[m]
+#    
+#market_units = aud_spot_prices.copy()
+#for m in market_units:
+#    market_units[m] = round(market_allocation/market_units[m])
+#return market_units
+
+
+
+
 #report.beta_pnl()
 
 
