@@ -581,7 +581,11 @@ class Position_Reporting:
 #report = Position_Reporting(positions, 'ACCU', current_date)
 #report = Position_Reporting(positions, 'NZU', current_date)
 
-#report = Position_Reporting(positions, 'NZU', current_date)
+#report = Position_Reporting(positions, 'CCA', current_date)
+#report.combine_frame()
+#report.FUM
+#report.beta_units()
+#report.beta_pnl()
 
 #report.beta_units()
 #market_allocation = report.FUM * 1/len(report.markets)
