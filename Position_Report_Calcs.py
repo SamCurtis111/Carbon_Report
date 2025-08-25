@@ -40,7 +40,7 @@ premiums = pd.read_excel('Positions.xlsx', sheet_name='Index')
 actual_prices = pd.read_excel('Positions.xlsx', sheet_name='Prices')
 current_prices = premiums[premiums.Spread.isin(mkts)]
 
-rates = ['USDAUD','GBPAUD','EURAUD','NZDAUD']
+rates = ['USDUSD','GBPUSD','EURUSD','NZDUSD']
 rates = premiums[premiums.Spread.isin(rates)]
 
 from Value_Derivatives import Derivatives
