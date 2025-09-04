@@ -49,12 +49,12 @@ class Market_Info:
         fx_dict = {}
         fx_dict['ACCU'] = 1
         fx_dict['LGC'] = 1
-        fx_dict['NZU'] = self.references[self.references.Spread=='NZDAUD'].Price.reset_index(drop=True)[0]
-        fx_dict['EUA'] = self.references[self.references.Spread=='EURAUD'].Price.reset_index(drop=True)[0]
-        fx_dict['UKA'] = self.references[self.references.Spread=='GBPAUD'].Price.reset_index(drop=True)[0]
-        fx_dict['CCA'] = self.references[self.references.Spread=='USDAUD'].Price.reset_index(drop=True)[0]
-        fx_dict['VCM'] = self.references[self.references.Spread=='USDAUD'].Price.reset_index(drop=True)[0]
-        fx_dict['RGGI'] = self.references[self.references.Spread=='USDAUD'].Price.reset_index(drop=True)[0]
+        fx_dict['NZU'] = self.references[self.references.Spread=='NZDUSD'].Price.reset_index(drop=True)[0]
+        fx_dict['EUA'] = self.references[self.references.Spread=='EURUSD'].Price.reset_index(drop=True)[0]
+        fx_dict['UKA'] = self.references[self.references.Spread=='GBPUSD'].Price.reset_index(drop=True)[0]
+        fx_dict['CCA'] = self.references[self.references.Spread=='USDUSD'].Price.reset_index(drop=True)[0]
+        fx_dict['VCM'] = self.references[self.references.Spread=='USDUSD'].Price.reset_index(drop=True)[0]
+        fx_dict['RGGI'] = self.references[self.references.Spread=='USDUSD'].Price.reset_index(drop=True)[0]
         return fx_dict
     
     def generate_positions(self):
